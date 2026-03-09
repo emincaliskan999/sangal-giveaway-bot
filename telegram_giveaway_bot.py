@@ -4,10 +4,10 @@ import io
 import logging
 import os
 import sqlite3
-from contextlib import closing
 from datetime import datetime
 from typing import Optional
 
+from aiohttp import web
 from aiogram import Bot, Dispatcher, F
 from aiogram.enums import ChatMemberStatus
 from aiogram.filters import Command, CommandStart
@@ -22,9 +22,6 @@ from aiogram.types import (
     CallbackQuery,
 )
 
-# =========================
-# CONFIG
-# =========================
 BOT_TOKEN = os.getenv("BOT_TOKEN", "PUT_YOUR_BOT_TOKEN_HERE")
 CHANNEL_USERNAME = os.getenv("CHANNEL_USERNAME", "@yourchannel")
 ADMIN_IDS = {
@@ -39,16 +36,10 @@ bot = Bot(BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
 
-# =========================
-# FSM
-# =========================
 class JoinFlow(StatesGroup):
     waiting_for_1xbet_id = State()
 
 
-# =========================
-# DB
-# =========================
 def init_db() -> None:
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
@@ -108,7 +99,8 @@ def list_giveaways() -> list[tuple]:
 def close_giveaway(code: str) -> bool:
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.execute(
-            "UPDATE giveaways SET is_active = 0 WHERE code = ? AND is_active = 1", (code,)
+            "UPDATE giveaways SET is_active = 0 WHERE code = ? AND is_active = 1",
+            (code,),
         )
         conn.commit()
         return cur.rowcount > 0
@@ -180,14 +172,12 @@ def export_entries_csv(giveaway_code: str) -> bytes:
 def count_entries(giveaway_code: str) -> int:
     with sqlite3.connect(DB_PATH) as conn:
         row = conn.execute(
-            "SELECT COUNT(*) FROM entries WHERE giveaway_code = ?", (giveaway_code,)
+            "SELECT COUNT(*) FROM entries WHERE giveaway_code = ?",
+            (giveaway_code,),
         ).fetchone()
         return row[0] if row else 0
 
 
-# =========================
-# HELPERS
-# =========================
 def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
 
@@ -197,7 +187,8 @@ def build_check_keyboard(giveaway_code: str) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="I Joined The Channel", callback_data=f"check_join:{giveaway_code}"
+                    text="I Joined The Channel",
+                    callback_data=f"check_join:{giveaway_code}",
                 )
             ]
         ]
@@ -208,7 +199,9 @@ def build_join_url(giveaway_code: str, bot_username: str) -> str:
     return f"https://t.me/{bot_username}?start={giveaway_code}"
 
 
-def build_channel_post_keyboard(giveaway_code: str, bot_username: str) -> InlineKeyboardMarkup:
+def build_channel_post_keyboard(
+    giveaway_code: str, bot_username: str
+) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
@@ -243,9 +236,6 @@ async def is_user_in_channel(user_id: int) -> bool:
         return False
 
 
-# =========================
-# COMMANDS - USER
-# =========================
 @dp.message(CommandStart())
 async def start_handler(message: Message, state: FSMContext) -> None:
     args = message.text.split(maxsplit=1)
@@ -255,13 +245,15 @@ async def start_handler(message: Message, state: FSMContext) -> None:
 
     if not giveaway_code:
         await message.answer(
-            "Welcome. Use the giveaway link from the channel post to join."
+            "Use the giveaway link from the latest channel post to join."
         )
         return
 
     giveaway = get_giveaway(giveaway_code)
     if not giveaway:
-        await message.answer("This giveaway was not found.")
+        await message.answer(
+            "This giveaway link is no longer active. Please return to the latest channel post."
+        )
         return
 
     _, code, title, is_active, _ = giveaway
@@ -277,19 +269,14 @@ async def start_handler(message: Message, state: FSMContext) -> None:
     if not joined:
         await state.update_data(giveaway_code=code)
         await message.answer(
-            f"To join *{title}*, first subscribe to {CHANNEL_USERNAME}.\n\n"
-            "After joining, press the button below.",
-            parse_mode="Markdown",
+            f"To join {title}, first subscribe to {CHANNEL_USERNAME}. After joining, press the button below.",
             reply_markup=build_check_keyboard(code),
         )
         return
 
     await state.update_data(giveaway_code=code)
     await state.set_state(JoinFlow.waiting_for_1xbet_id)
-    await message.answer(
-        f"You are joining *{title}*.\n\nPlease enter your 1xBet ID.",
-        parse_mode="Markdown",
-    )
+    await message.answer(f"You are joining {title}. Please enter your 1xBet ID.")
 
 
 @dp.callback_query(F.data.startswith("check_join:"))
@@ -353,9 +340,6 @@ async def handle_1xbet_id(message: Message, state: FSMContext) -> None:
     await message.answer("Your participation has been recorded successfully.")
 
 
-# =========================
-# COMMANDS - ADMIN
-# =========================
 @dp.message(Command("new_giveaway"))
 async def new_giveaway_handler(message: Message) -> None:
     if not is_admin(message.from_user.id):
@@ -364,9 +348,7 @@ async def new_giveaway_handler(message: Message) -> None:
 
     parts = message.text.split(" ", 2)
     if len(parts) < 3:
-        await message.answer(
-            "Usage:\n/new_giveaway giveaway_code Giveaway Title"
-        )
+        await message.answer("Usage:\n/new_giveaway giveaway_code Giveaway Title")
         return
 
     code = parts[1].strip()
@@ -378,12 +360,10 @@ async def new_giveaway_handler(message: Message) -> None:
         await message.answer("A giveaway with this code already exists.")
         return
 
-    deep_link = f"https://t.me/{(await bot.me()).username}?start={code}"
+    me = await bot.get_me()
+    deep_link = f"https://t.me/{me.username}?start={code}"
     await message.answer(
-        "Giveaway created successfully.\n\n"
-        f"Code: {code}\n"
-        f"Title: {title}\n"
-        f"Join link: {deep_link}"
+        f"Giveaway created successfully.\n\nCode: {code}\nTitle: {title}\nJoin link: {deep_link}"
     )
 
 
@@ -458,11 +438,7 @@ async def post_giveaway_handler(message: Message) -> None:
     parts = message.text.split(maxsplit=1)
     if len(parts) < 2:
         await message.answer(
-            "Usage:
-/post_giveaway giveaway_code
-
-"
-            "Optional: reply to a photo with this command to publish a visual post."
+            "Usage:\n/post_giveaway giveaway_code\n\nOptional: reply to a photo with this command to publish a visual post."
         )
         return
 
@@ -482,19 +458,11 @@ async def post_giveaway_handler(message: Message) -> None:
     keyboard = build_channel_post_keyboard(giveaway_code, me.username)
 
     caption = (
-        f"🎁 {title}
-
-"
-        "We took skins from our players and are giving them to you.
-
-"
-        "To participate:
-
-"
-        "1️⃣ Subscribe to the channel
-"
-        "2️⃣ Click JOIN
-"
+        f"🎁 {title}\n\n"
+        "We took skins from our players and are giving them to you.\n\n"
+        "To participate:\n\n"
+        "1️⃣ Subscribe to the channel\n"
+        "2️⃣ Click JOIN\n"
         "3️⃣ Enter your 1xBet ID"
     )
 
@@ -514,9 +482,7 @@ async def post_giveaway_handler(message: Message) -> None:
         )
 
     await message.answer(
-        "Giveaway post published successfully.
-
-"
+        "Giveaway post published successfully.\n\n"
         f"Join link: {join_url}"
     )
 
@@ -528,29 +494,38 @@ async def help_admin_handler(message: Message) -> None:
         return
 
     await message.answer(
-        "Admin commands:
-
-"
-        "/new_giveaway code title
-"
-        "/giveaways
-"
-        "/close_giveaway code
-"
-        "/export code
-"
+        "Admin commands:\n\n"
+        "/new_giveaway code title\n"
+        "/giveaways\n"
+        "/close_giveaway code\n"
+        "/export code\n"
         "/post_giveaway code"
     )
 
 
-# =========================
-# MAIN
-# =========================
+async def healthcheck(request):
+    return web.Response(text="ok")
+
+
+async def start_health_server():
+    app = web.Application()
+    app.router.add_get("/", healthcheck)
+    app.router.add_get("/healthz", healthcheck)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+
+    port = int(os.getenv("PORT", "10000"))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+
+
 async def main() -> None:
     if BOT_TOKEN == "PUT_YOUR_BOT_TOKEN_HERE":
         raise RuntimeError("Please set BOT_TOKEN before running the bot.")
 
     init_db()
+    await start_health_server()
     await dp.start_polling(bot)
 
 
