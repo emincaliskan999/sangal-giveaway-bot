@@ -458,16 +458,16 @@ async def post_giveaway_handler(message: Message) -> None:
     keyboard = build_channel_post_keyboard(giveaway_code, me.username)
 
     caption = (
-        "DERBY EXCITEMENT IS IN THE AIR 🔥\n\n"
-        "We’re giving away 3 Galatasaray or Fenerbahçe jerseys so you can watch the upcoming derbies in your team’s colors 🎁\n\n"
-        "How to participate:\n\n"
-        "🔸 Make sure you're subscribed to Sangal Telegram\n"
-        "🔸 Place a bet on the derby\n"
-        "🔸 Click JOIN and enter your 1xBet ID\n\n"
-        "🎯 Promocode: SANGAL1X\n"
+        "⁠DERBİ HEYECANI İÇİN NEFESLER TUTULDU 🔥\n\n"
+        "Yaklaşan derbileri takımının formasıyla izleyebilmen için 3 adet Galatasaray veya Fenerbahçe forması hediye ediyoruz 🎁\n\n"
+        "Kurallar:\n\n"
+        "🔸 Sangal ve 1xBet Türkiye Telegram kanallarına abone ol\n"
+        "🔸 Derbiye bahis yapın\n"
+        "🔸 JOIN butonuna tıkla ve 1xBet ID’ni gir\n\n"
+        "🎯 Promosyon kodu: 1XSANGAL\n"
         "🔗 https://crplnk.net/BUd1jg\n\n"
-        "📆 Deadline: 26/04/2026\n\n"
-        "❗️18+, bet responsibly. Check legal regulations in your country."
+        "📆 Son katılım: 26/04/2026\n\n"
+        "❗️18+, sorumlu bahis yapınız. Ülkenizdeki yasal düzenlemeleri kontrol ediniz."
     )
 
     if message.reply_to_message and message.reply_to_message.photo:
