@@ -457,14 +457,19 @@ async def post_giveaway_handler(message: Message) -> None:
     join_url = build_join_url(giveaway_code, me.username)
     keyboard = build_channel_post_keyboard(giveaway_code, me.username)
 
-    caption = (
-        f"🎁 {title}\n\n"
-        "We took skins from our players and are giving them to you.\n\n"
-        "To participate:\n\n"
-        "1️⃣ Subscribe to the channel\n"
-        "2️⃣ Click JOIN\n"
-        "3️⃣ Enter your 1xBet ID"
-    )
+  caption = (
+    "DERBY EXCITEMENT IS IN THE AIR 🔥\n\n"
+    "We’re giving away 3 Galatasaray or Fenerbahçe jerseys so you can watch the upcoming derbies in your team’s colors 🎁\n\n"
+    "How to participate:\n\n"
+    "🔸 Make sure you're subscribed to Sangal Telegram\n"
+    "🔸 Place a bet on the derby\n"
+    "🔸 Click JOIN and enter your 1xBet ID\n\n"
+    "🎯 Promocode: SANGAL1X\n"
+    "🔗 https://crplnk.net/BUd1jg\n\n"
+    "📆 Deadline: 26/04/2026\n\n"
+    "Good luck 🍀\n\n"
+    "❗️18+, bet responsibly. Check legal regulations in your country."
+)
 
     if message.reply_to_message and message.reply_to_message.photo:
         photo = message.reply_to_message.photo[-1]
