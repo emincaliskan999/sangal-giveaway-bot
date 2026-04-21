@@ -467,7 +467,6 @@ async def post_giveaway_handler(message: Message) -> None:
         "🎯 Promocode: SANGAL1X\n"
         "🔗 https://crplnk.net/BUd1jg\n\n"
         "📆 Deadline: 26/04/2026\n\n"
-        "Good luck 🍀\n\n"
         "❗️18+, bet responsibly. Check legal regulations in your country."
     )
 
